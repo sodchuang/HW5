@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # Worker (lab machine) - 只運行資料庫服務
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=worker_names
+      - POSTGRES_USER=worker
+      - POSTGRES_PASSWORD=worker_password
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      # 允許外部連接
+      - POSTGRES_HOST_AUTH_METHOD=md5
+    volumes:
+      # 資料儲存在指定路徑 /var/lib/postgres-data
+      - postgres_data:/var/lib/postgresql/data
+      # 初始化SQL腳本
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # PostgreSQL配置文件
+      - ./db/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+      - ./db/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+    networks:
+      - worker_net
+    ports:
+      # 暴露5432埠供Manager連接 - 綁定到所有網路介面
+      - target: 5432
+        published: 5432
+        protocol: tcp
+        mode: host  # 直接暴露在主機上，不經過Swarm路由
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+      # 確保部署在manager節點以便直接網路存取
+      placement:
+        constraints:
+          - node.role == manager
+      endpoint_mode: dnsrr  # DNS輪詢模式，更適合外部連接
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worker -d worker_names"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # 資料儲存路徑 - 可以是本地路徑或NFS路徑
+      # Linux: /var/lib/postgres-data
+      # Windows: 使用相對路徑
+      device: ${PWD}/postgres-data
+
+networks:
+  worker_net:
+    driver: overlay
+    attachable: true
+    # 使用預設網路配置，更好的外部連接性
+    external: false
