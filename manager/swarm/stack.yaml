@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  # Web service (Nginx) - runs on manager node
+  web:
+    image: mcapp_web:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - appnet
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API service (Flask) - runs on manager node
+  api:
+    image: mcapp_api:latest
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/mcapp
+      - SECRET_KEY=your-secret-key-change-this-in-production
+# depends_on removed - db service runs on worker node
+    networks:
+      - appnet
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Note: Database service (db) is deployed separately on worker node
+# This manager-side stack only includes web and api services
+
+# Overlay network for cross-node communication
+networks:
+  appnet:
+    driver: overlay
+    attachable: true
+
+# Note: Configuration files are built into images
+# No external configs needed as they are included in Docker images

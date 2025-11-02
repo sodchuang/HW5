@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Names Manager - Docker Swarm</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      margin: 0; 
+      padding: 0; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+    
+    .navbar {
+      background: white;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    
+    .navbar h1 {
+      margin: 0;
+      color: #2c3e50;
+      font-size: 1.8rem;
+      text-align: center;
+    }
+    
+    .container { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 0 2rem;
+    }
+    
+    .section { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 2rem; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    
+    h2 { 
+      color: #34495e; 
+      margin-top: 0; 
+      border-bottom: 3px solid #3498db; 
+      padding-bottom: 0.5rem; 
+      font-size: 1.5rem;
+    }
+    
+    .form-group { 
+      margin-bottom: 1.5rem; 
+    }
+    
+    label { 
+      display: block; 
+      margin-bottom: 0.5rem; 
+      font-weight: 600; 
+      color: #555; 
+      font-size: 1rem;
+    }
+    
+    input[type="text"] { 
+      width: 100%; 
+      padding: 0.875rem; 
+      border: 2px solid #e1e8ed; 
+      border-radius: 8px; 
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    
+    input[type="text"]:focus { 
+      outline: none; 
+      border-color: #3498db; 
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    button { 
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 0.875rem 1.5rem; 
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    
+    button:hover { 
+      background: #2980b9; 
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    button.danger { 
+      background: #e74c3c; 
+    }
+    
+    button.danger:hover { 
+      background: #c0392b; 
+    }
+    
+    button.success { 
+      background: #27ae60; 
+    }
+    
+    button.success:hover { 
+      background: #229954; 
+    }
+    
+    ul { 
+      list-style: none; 
+      padding: 0; 
+    }
+    
+    li { 
+      margin-bottom: 1rem;
+      padding: 1.5rem; 
+      border: 1px solid #e1e8ed; 
+      border-radius: 8px;
+      background: #fafbfc;
+      transition: all 0.2s;
+    }
+    
+    li:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+    
+    .item-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 0.5rem; 
+    }
+    
+    .item-title { 
+      font-weight: 600; 
+      color: #2c3e50; 
+      margin: 0; 
+      font-size: 1.1rem;
+    }
+    
+    .item-actions { 
+      display: flex; 
+      gap: 0.5rem; 
+    }
+    
+    .item-actions button { 
+      padding: 0.5rem 1rem; 
+      font-size: 14px; 
+    }
+    
+    .meta { 
+      color: #7f8c8d; 
+      font-size: 0.9rem; 
+      margin-top: 0.5rem; 
+    }
+    
+    .msg { 
+      padding: 1rem; 
+      border-radius: 8px; 
+      margin-bottom: 1rem; 
+      display: none;
+      font-weight: 500;
+    }
+    
+    .msg.error { 
+      background: #f8d7da; 
+      color: #721c24; 
+      border: 1px solid #f5c6cb; 
+    }
+    
+    .msg.success { 
+      background: #d4edda; 
+      color: #155724; 
+      border: 1px solid #c3e6cb; 
+    }
+    
+    .stats {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .stats h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #7f8c8d;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #7f8c8d;
+    }
+    
+    .empty-state h3 {
+      margin-bottom: 1rem;
+      color: #34495e;
+    }
+    
+    @media (max-width: 768px) {
+      .container { 
+        padding: 0 1rem; 
+      }
+      
+      .section {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      
+      .item-header { 
+        flex-direction: column; 
+        align-items: stretch; 
+      }
+      
+      .item-actions { 
+        margin-top: 1rem; 
+        justify-content: flex-end; 
+      }
+      
+      .navbar {
+        padding: 1rem;
+      }
+      
+      .navbar h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <h1>🐳 Names Manager - Docker Swarm</h1>
+  </nav>
+  
+  <div class="container">
+    <div class="section">
+      <div class="stats">
+        <h3 id="statsText">載入中...</h3>
+      </div>
+      
+      <h2>👥 Names Management</h2>
+      
+      <div class="form-group">
+        <label for="nameInput">新增名字</label>
+        <input id="nameInput" type="text" placeholder="輸入名字 (上限 50 字)" maxlength="50"/>
+      </div>
+      
+      <button id="addNameBtn">新增名字</button>
+      <button id="editNameBtn" style="display:none; margin-left: 0.5rem;" class="success">更新名字</button>
+      <button id="cancelEditBtn" style="display:none; margin-left: 0.5rem;" class="danger">取消編輯</button>
+      
+      <div id="namesMsg" class="msg"></div>
+      
+      <div id="loadingDiv" class="loading">
+        <p>載入名字列表中...</p>
+      </div>
+      
+      <ul id="namesList" style="display:none;"></ul>
+    </div>
+  </div>
+
+  <script>
+    let editingNameId = null;
+    
+    // API helper function
+    async function api(path, opts = {}) {
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        ...opts
+      };
+      
+      try {
+        const res = await fetch(path, config);
+        const contentType = res.headers.get('content-type') || '';
+        
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (!res.ok) throw data;
+          return data;
+        } else {
+          if (!res.ok) throw { error: 'Unexpected response' };
+          return null;
+        }
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    }
+    
+    // Utility functions
+    function showMsg(message, type = 'error') {
+      const el = document.getElementById('namesMsg');
+      el.textContent = message;
+      el.className = `msg ${type}`;
+      el.style.display = 'block';
+      setTimeout(() => {
+        el.style.display = 'none';
+      }, 5000);
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatDateTime(dateString) {
+      if (!dateString) return '';
+      return new Date(dateString).toLocaleString('zh-TW');
+    }
+
+    function updateStats(count) {
+      const statsEl = document.getElementById('statsText');
+      statsEl.textContent = `總共有 ${count} 個名字`;
+    }
+
+    // Names management functions
+    async function loadNames() {
+      const loadingDiv = document.getElementById('loadingDiv');
+      const namesList = document.getElementById('namesList');
+      
+      try {
+        loadingDiv.style.display = 'block';
+        namesList.style.display = 'none';
+        
+        const data = await api('/api/names', { method: 'GET' });
+        const ul = document.getElementById('namesList');
+        ul.innerHTML = '';
+        
+        updateStats(data.length);
+        
+        if (data.length === 0) {
+          ul.innerHTML = `
+            <div class="empty-state">
+              <h3>還沒有任何名字</h3>
+              <p>開始新增您的第一個名字吧！</p>
+            </div>
+          `;
+        } else {
+          data.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <div class="item-header">
+                <h4 class="item-title">${escapeHtml(item.name)}</h4>
+                <div class="item-actions">
+                  <button onclick="editName(${item.id}, '${escapeHtml(item.name).replace(/'/g, "\\'")}')">編輯</button>
+                  <button class="danger" onclick="deleteName(${item.id})">刪除</button>
+                </div>
+              </div>
+              <div class="meta">
+                ID: ${item.id} | 建立時間: ${formatDateTime(item.created_at)}
+              </div>
+            `;
+            ul.appendChild(li);
+          });
+        }
+        
+        loadingDiv.style.display = 'none';
+        namesList.style.display = 'block';
+      } catch (e) {
+        loadingDiv.style.display = 'none';
+        namesList.style.display = 'block';
+        console.error('Load names error:', e);
+        showMsg(e.detail || e.error || '載入名字列表失敗', 'error');
+        updateStats(0);
+      }
+    }
+
+    async function addName() {
+      const nameInput = document.getElementById('nameInput');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        showMsg('名字不能為空', 'error');
+        nameInput.focus();
+        return;
+      }
+      
+      if (name.length > 50) {
+        showMsg('名字長度超過 50 字元', 'error');
+        nameInput.focus();
+        return;
+      }
+      
+      try {
+        await api('/api/names', {
+          method: 'POST',
+          body: JSON.stringify({ name })
+        });
+        
+        nameInput.value = '';
+        showMsg('名字已新增', 'success');
+        loadNames();
+      } catch (e) {
+        console.error('Add name error:', e);
+        showMsg(e.detail || e.error || '新增名字失敗', 'error');
+      }
+    }
+
+    function editName(id, currentName) {
+      editingNameId = id;
+      document.getElementById('nameInput').value = currentName;
+      document.getElementById('addNameBtn').style.display = 'none';
+      document.getElementById('editNameBtn').style.display = 'inline-block';
+      document.getElementById('cancelEditBtn').style.display = 'inline-block';
+      document.getElementById('nameInput').focus();
+    }
+
+    async function updateName() {
+      const nameInput = document.getElementById('nameInput');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        showMsg('名字不能為空', 'error');
+        nameInput.focus();
+        return;
+      }
+      
+      if (name.length > 50) {
+        showMsg('名字長度超過 50 字元', 'error');
+        nameInput.focus();
+        return;
+      }
+      
+      try {
+        await api(`/api/names/${editingNameId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name })
+        });
+        
+        cancelEdit();
+        showMsg('名字已更新', 'success');
+        loadNames();
+      } catch (e) {
+        console.error('Update name error:', e);
+        showMsg(e.detail || e.error || '更新名字失敗', 'error');
+      }
+    }
+
+    function cancelEdit() {
+      editingNameId = null;
+      document.getElementById('nameInput').value = '';
+      document.getElementById('addNameBtn').style.display = 'inline-block';
+      document.getElementById('editNameBtn').style.display = 'none';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    async function deleteName(id) {
+      if (!confirm('確定要刪除此名字？')) return;
+      
+      try {
+        await api(`/api/names/${id}`, { method: 'DELETE' });
+        showMsg('名字已刪除', 'success');
+        loadNames();
+      } catch (e) {
+        console.error('Delete name error:', e);
+        showMsg(e.detail || e.error || '刪除名字失敗', 'error');
+      }
+    }
+
+    // Event listeners
+    document.getElementById('addNameBtn').addEventListener('click', addName);
+    document.getElementById('editNameBtn').addEventListener('click', updateName);
+    document.getElementById('cancelEditBtn').addEventListener('click', cancelEdit);
+
+    // Enter key support
+    document.getElementById('nameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        if (editingNameId) {
+          updateName();
+        } else {
+          addName();
+        }
+      }
+    });
+
+    // Initial load
+    loadNames();
+  </script>
+</body>
+</html>

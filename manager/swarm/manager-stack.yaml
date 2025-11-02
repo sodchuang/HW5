@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  # Web service (Nginx) - runs on manager node
+  web:
+    image: mcapp_web:latest
+    ports:
+      - "80:80"
+    networks:
+      - appnet
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API service (FastAPI) - runs on manager node
+  api:
+    image: mcapp_api:latest
+    environment:
+      - DATABASE_URL=postgresql://worker:worker_password@192.168.0.34:5432/worker_names
+      - SECRET_KEY=your-secret-key-change-this-in-production
+    # Note: db service connection - db runs on worker node
+    networks:
+      - appnet
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Overlay network for cross-node communication
+networks:
+  appnet:
+    driver: overlay
+    attachable: true
+    external: true  # Network should be created externally and shared with worker
+
+# Note: This is the MANAGER-side stack deployment
+# Database service (db) is deployed separately on worker node
+# The overlay network 'appnet' enables communication between manager and worker services
